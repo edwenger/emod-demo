@@ -4,6 +4,12 @@ channels:
   - defaults
 dependencies:
   - python=3.8
+  - numpy
+  - pandas
+  - jupyter
+  - jupyterlab
+  - notebook
+  - matplotlib-base
   - pybind11
   - cmake
   - libboost
