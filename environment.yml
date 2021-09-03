@@ -1,6 +1,7 @@
-name: emod-demo
+name: emod-demo-environment
 channels:
   - conda-forge
+  - defaults
 dependencies:
   - python=3.8
   - numpy
@@ -9,4 +10,6 @@ dependencies:
   - jupyterlab
   - notebook
   - matplotlib-base
-  - pip
+  - pybind11
+  - cmake
+  - libboost

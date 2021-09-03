@@ -1,0 +1,5 @@
+#!/bin/bash
+
+git clone https://github.com/edwenger/emodlib.git
+cd emodlib/python
+python setup.py install
