@@ -1,0 +1,12 @@
+name: emod-demo
+channels:
+  - conda-forge
+dependencies:
+  - python=3.8
+  - numpy
+  - pandas
+  - jupyter
+  - jupyterlab
+  - notebook
+  - matplotlib-base
+  - pip
