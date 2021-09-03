@@ -10,3 +10,5 @@ dependencies:
   - notebook
   - matplotlib-base
   - pip
+  - pip:
+      - git+https://github.com/edwenger/emodlib
