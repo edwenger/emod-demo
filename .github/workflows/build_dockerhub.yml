@@ -9,12 +9,15 @@ jobs:
   build:
     runs-on: ubuntu-latest
     steps:
+    
     - name: checkout
       uses: actions/checkout@main
+      
     - name: build and upload docker image
       uses: jupyterhub/repo2docker-action@master
       with:
         DOCKER_USERNAME: ${{ secrets.DOCKER_HUB_USERNAME }}
         DOCKER_PASSWORD: ${{ secrets.DOCKER_HUB_ACCESS_TOKEN }}
         IMAGE_NAME: edwenger/${{ github.event.repository.name }}
+        BINDER_CACHE: true
         PUBLIC_REGISTRY_CHECK: true
