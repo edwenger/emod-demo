@@ -5,7 +5,7 @@ import pandas as pd
 import xarray as xr
 import matplotlib.pyplot as plt
 
-from emodlib.malaria import *
+from emodlib.malaria import IntrahostComponent
 
 
 def configure_from_file(config_path):

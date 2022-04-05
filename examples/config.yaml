@@ -1,6 +1,7 @@
 Falciparum_MSP_Variants: 32
 Falciparum_Nonspecific_Types: 76
 Falciparum_PfEMP1_Variants: 1070
+Max_Individual_Infections: 5
 Run_Number: 12345
 infection_params:
   Antibody_IRBC_Kill_Rate: 1.596
