@@ -38,6 +38,7 @@ def monthly_eir_challenge(duration, monthly_eirs):
 
     asexuals = np.zeros(duration)
     gametocytes = np.zeros(duration)
+    fevers = np.zeros(duration)
 
     ic = IntrahostComponent.create()
 
@@ -54,27 +55,29 @@ def monthly_eir_challenge(duration, monthly_eirs):
         
         asexuals[t] = ic.parasite_density
         gametocytes[t] = ic.gametocyte_density
+        fevers[t] = ic.fever_temperature
 
     return pd.DataFrame({'days': range(duration),
                          'parasite_density': asexuals,
-                         'gametocyte_density': gametocytes}).set_index('days')
+                         'gametocyte_density': gametocytes,
+                         'fever_temperature': fevers}).set_index('days')
 
 
 def plot_timeseries(df):
     fig, ax = plt.subplots(1, 1, figsize=(8, 3))
-    df.plot(ax=ax, color=dict(parasite_density='navy', gametocyte_density='darkgreen'))
+    df[['parasite_density', 'gametocyte_density']].plot(ax=ax, color=dict(parasite_density='navy', gametocyte_density='darkgreen'))
     ax.set(yscale='log', ylim=(1e-4, 1e5))
     fig.set_tight_layout(True)
     
 
-def plot_heatmap(df):
+def plot_heatmap(df, channel='parasite_density', vmin=1e-4, vmax=1e5):
     fig, ax = plt.subplots(1, 1, figsize=(8, 3))
-    densities = np.reshape(df.parasite_density.values, (-1, 365))
-    ax.imshow(densities, aspect='auto', origin='lower', norm=LogNorm(vmin=1e-4, vmax=1e5))
+    densities = np.reshape(df[channel].values, (-1, 365))
+    ax.imshow(densities, aspect='auto', origin='lower', norm=LogNorm(vmin=vmin, vmax=vmax), interpolation='none')
     ax.set(
         xlabel='day of year',
         ylabel='age (years)',
-        title='Parasite Density (/uL)')
+        title=channel)
     fig.set_tight_layout(True)
 
 
