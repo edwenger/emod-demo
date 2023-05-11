@@ -1,0 +1,9 @@
+numpy
+pandas
+xarray
+matplotlib
+optuna
+ipywidgets
+
+--extra-index-url https://test.pypi.org/simple/
+emodlib>=0.0.2
