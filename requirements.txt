@@ -6,4 +6,4 @@ optuna
 ipywidgets
 
 --extra-index-url https://test.pypi.org/simple/
-emodlib>=0.0.2
+emodlib>=0.0.3
