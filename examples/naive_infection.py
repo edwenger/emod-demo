@@ -1,23 +1,9 @@
-import yaml
-
 import numpy as np
 import pandas as pd
 import xarray as xr
 import matplotlib.pyplot as plt
 
 from emodlib.malaria import IntrahostComponent
-
-
-def configure_from_file(config_path):
-
-    with open(config_path) as cfg:
-        params = yaml.load(cfg, Loader=yaml.FullLoader)
-
-    # print(yaml.dump(params))
-
-    IntrahostComponent.configure(params)
-    
-    return params
 
 
 def run_challenge(duration):
@@ -68,8 +54,6 @@ def plot_timeseries(df):
     
 
 if __name__ == '__main__':
-
-    configure_from_file('config.yaml')
 
     df = run_challenge(duration=300)
     print(df.head(10))

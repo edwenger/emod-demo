@@ -7,8 +7,6 @@ from matplotlib.colors import LogNorm
 
 from emodlib.malaria import IntrahostComponent
 
-from naive_infection import configure_from_file
-
 
 def surface_area_biting_function(age_days):
     """
@@ -82,8 +80,6 @@ def plot_heatmap(df, channel='parasite_density', vmin=1e-4, vmax=1e5):
 
 
 if __name__ == '__main__':
-
-    configure_from_file('config.yaml')
 
     rafin_marke_monthly_eirs = [1, 1, 0.5, 1, 1, 2, 3.875, 7.75, 15.0, 3.875, 1, 1]
 
