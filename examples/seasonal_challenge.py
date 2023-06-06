@@ -1,9 +1,10 @@
 import datetime as dt
 
+from matplotlib.colors import LogNorm
+import matplotlib.pyplot as plt
 import numpy as np
 import pandas as pd
-import matplotlib.pyplot as plt
-from matplotlib.colors import LogNorm
+import xarray as xr
 
 from emodlib.malaria import IntrahostComponent
 
@@ -68,6 +69,21 @@ def monthly_eir_challenge(duration, monthly_eirs, updates_per_day=2, callback=la
                          'fever_temperature': fevers,
                          'infectiousness': infects,
                          'n_infections': n_infs}).set_index('days')
+
+
+def multiple_challenges(n_people, duration, monthly_eirs):
+
+    da = xr.DataArray(dims=('individual', 'time', 'channel'),
+                      coords=(range(n_people), pd.date_range('2000-01-01', freq='D', periods=duration), ['parasite_density']))
+    
+    for individual in range(n_people):
+    
+        df = monthly_eir_challenge(duration=duration,
+                                   monthly_eirs=monthly_eirs)
+
+        da.loc[dict(individual=individual, channel='parasite_density')] = df.parasite_density.values
+
+    return da
 
 
 def plot_timeseries(df):
