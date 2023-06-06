@@ -3,8 +3,10 @@ import mlflow
 import numpy as np
 import optuna
 from optuna.integration.mlflow import MLflowCallback
+import pandas as pd
+import xarray as xr
 
-from seasonal_challenge import multiple_challenges
+from seasonal_challenge import monthly_eir_challenge  #, multiple_challenges
 from emodlib.malaria import IntrahostComponent
 
 
@@ -26,24 +28,49 @@ def plot_comparison(ref, sim):
     return fig
 
 
-def objective(trial, input_eirs, prev_ref, n_people=5, duration=20*365):
+def eval(ref, sim, plot=False):
+
+    prev_by_season = (sim.loc[dict(channel='parasite_density')] > 16).resample(time='3M').mean()
+    avg_prev_by_age = prev_by_season.groupby('time.year').mean().mean(dim='individual')
+    n_ages = min(len(ref), len(avg_prev_by_age))
+
+    if plot:
+        fig = plot_comparison(ref[:n_ages], avg_prev_by_age[:n_ages])
+        mlflow.log_figure(fig, 'prev_compare.png')
+
+    return kl(ref[:n_ages], avg_prev_by_age[:n_ages])
+
+
+def objective(trial, input_eirs, prev_ref, n_people=20, duration=20*365):
 
     antigen_switch_rate = trial.suggest_float("Antigen_Switch_Rate", 5e-10, 5e-8, log=True)
     mlflow.log_param("Antigen_Switch_Rate", antigen_switch_rate)
 
     IntrahostComponent.set_params(dict(infection_params=dict(Antigen_Switch_Rate=antigen_switch_rate)))
 
-    da = multiple_challenges(n_people=n_people, duration=duration, monthly_eirs=input_eirs)
+    # da = multiple_challenges(n_people=n_people, duration=duration, monthly_eirs=input_eirs)
 
-    prev_by_season = (da.loc[dict(channel='parasite_density')] > 16).resample(time='3M').mean()
-    avg_prev_by_age = prev_by_season.groupby('time.year').mean().mean(dim='individual')
+    ### refactoring to explore optuna.pruners behavior
 
-    n_ages = min(len(prev_ref), len(avg_prev_by_age))
+    da = xr.DataArray(dims=('individual', 'time', 'channel'),
+                      coords=(range(n_people), pd.date_range('2000-01-01', freq='D', periods=duration), ['parasite_density']))        
+
+    for individual in range(n_people):
     
-    fig = plot_comparison(prev_ref[:n_ages], avg_prev_by_age[:n_ages])
-    mlflow.log_figure(fig, 'prev_compare.png')
+        df = monthly_eir_challenge(duration=duration,
+                                   monthly_eirs=input_eirs)
 
-    kl_div = kl(prev_ref[:n_ages], avg_prev_by_age[:n_ages])
+        da.loc[dict(individual=individual, channel='parasite_density')] = df.parasite_density.values
+
+        if (individual % 5) == 0:
+            intermediate_value = eval(prev_ref, da.where(da.individual <= individual, drop=True))
+            print(trial._trial_id, intermediate_value, individual)
+            trial.report(intermediate_value, individual)
+
+            if trial.should_prune():
+                raise optuna.exceptions.TrialPruned()
+
+    kl_div = eval(prev_ref, da, plot=True)
     mlflow.log_metric("kl_div", kl_div)
 
     return kl_div
@@ -72,8 +99,10 @@ if __name__ == '__main__':
     def prevalence_calibration(trial):
         return objective(trial, input_eirs=example_EIRs, prev_ref=example_prev_by_age_ref)
 
-    study_name = "minimize_KL"  # unique identifier
-    storage_name = "sqlite:///optuna_{}.db".format(study_name)
-    study = optuna.create_study(study_name=study_name, storage=storage_name, direction='minimize')
+    study_name = "with_pruning_debug5"  # unique identifier
+    storage_name = "sqlite:///optuna_prev_calib.db"
+    study = optuna.create_study(study_name=study_name, storage=storage_name,
+                                pruner=optuna.pruners.MedianPruner(),
+                                direction='minimize')
 
-    study.optimize(prevalence_calibration, n_trials=20, callbacks=[mlflc])
+    study.optimize(prevalence_calibration, n_trials=40, callbacks=[mlflc])
