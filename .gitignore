@@ -2,6 +2,9 @@
 mlruns/
 mlruns.db
 
+# caching for optuna-dashboard
+optuna_*.db
+
 # data and temp files
 *.nc
 dask-worker-space/

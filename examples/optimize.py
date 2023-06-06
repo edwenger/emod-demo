@@ -72,6 +72,8 @@ if __name__ == '__main__':
     def prevalence_calibration(trial):
         return objective(trial, input_eirs=example_EIRs, prev_ref=example_prev_by_age_ref)
 
-    study = optuna.create_study(study_name='minimize_KL', direction='minimize')
+    study_name = "minimize_KL"  # unique identifier
+    storage_name = "sqlite:///optuna_{}.db".format(study_name)
+    study = optuna.create_study(study_name=study_name, storage=storage_name, direction='minimize')
 
-    study.optimize(prevalence_calibration, n_trials=5, callbacks=[mlflc])
+    study.optimize(prevalence_calibration, n_trials=20, callbacks=[mlflc])
