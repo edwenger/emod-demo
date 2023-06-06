@@ -1,3 +1,7 @@
+# mlflow local caching
+mlruns/
+mlruns.db
+
 # data and temp files
 *.nc
 dask-worker-space/
