@@ -1,9 +1,10 @@
 import datetime as dt
 
+from matplotlib.colors import LogNorm
+import matplotlib.pyplot as plt
 import numpy as np
 import pandas as pd
-import matplotlib.pyplot as plt
-from matplotlib.colors import LogNorm
+import xarray as xr
 
 from emodlib.malaria import IntrahostComponent
 
@@ -27,44 +28,70 @@ def surface_area_biting_function(age_days):
     return 1.0
 
 
-def month_index_from_timestep(t):
+def month_index_from_day(t):
     y2k = dt.datetime(2000, 1, 1)
     return (y2k + dt.timedelta(days=t)).month - 1
 
 
-def monthly_eir_challenge(duration, monthly_eirs):
+def monthly_eir_challenge(duration, monthly_eirs, updates_per_day=2, callback=lambda x: None):
 
     asexuals = np.zeros(duration)
     gametocytes = np.zeros(duration)
     fevers = np.zeros(duration)
+    infects = np.zeros(duration)
+    n_infs = np.zeros(duration)
 
     ic = IntrahostComponent.create()
 
     for t in range(duration):
 
-        daily_eir = monthly_eirs[month_index_from_timestep(t)] * 12 / 365.0
+        daily_eir = monthly_eirs[month_index_from_day(t)] * 12 / 365.0
         daily_eir *= surface_area_biting_function(t)
         p_infected = 1 - np.exp(-daily_eir)
         
         if np.random.random() < p_infected:
             ic.challenge()
 
-        ic.update(dt=1)
+        for _ in range(updates_per_day):
+            ic.update(dt=1.0/updates_per_day)
         
+        callback(ic)
+
         asexuals[t] = ic.parasite_density
         gametocytes[t] = ic.gametocyte_density
         fevers[t] = ic.fever_temperature
+        infects[t] = ic.infectiousness
+        n_infs[t] = ic.n_infections
 
     return pd.DataFrame({'days': range(duration),
                          'parasite_density': asexuals,
                          'gametocyte_density': gametocytes,
-                         'fever_temperature': fevers}).set_index('days')
+                         'fever_temperature': fevers,
+                         'infectiousness': infects,
+                         'n_infections': n_infs}).set_index('days')
+
+
+def multiple_challenges(n_people, duration, monthly_eirs):
+
+    da = xr.DataArray(dims=('individual', 'time', 'channel'),
+                      coords=(range(n_people), pd.date_range('2000-01-01', freq='D', periods=duration), ['parasite_density']))
+    
+    for individual in range(n_people):
+    
+        df = monthly_eir_challenge(duration=duration,
+                                   monthly_eirs=monthly_eirs)
+
+        da.loc[dict(individual=individual, channel='parasite_density')] = df.parasite_density.values
+
+    return da
 
 
 def plot_timeseries(df):
-    fig, ax = plt.subplots(1, 1, figsize=(8, 3))
-    df[['parasite_density', 'gametocyte_density']].plot(ax=ax, color=dict(parasite_density='navy', gametocyte_density='darkgreen'))
-    ax.set(yscale='log', ylim=(1e-4, 1e5))
+    fig, axs = plt.subplots(2, 1, figsize=(8, 5), sharex=True)
+    df[['parasite_density', 'gametocyte_density']].plot(ax=axs[0], color=dict(parasite_density='navy', gametocyte_density='darkgreen'))
+    axs[0].set(yscale='log', ylim=(1e-4, 1e5))
+    df.n_infections.plot(ax=axs[1])
+    axs[1].set(ylabel='n_infections')
     fig.set_tight_layout(True)
     
 
