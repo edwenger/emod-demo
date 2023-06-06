@@ -41,12 +41,20 @@ def eval(ref, sim, plot=False):
     return kl(ref[:n_ages], avg_prev_by_age[:n_ages])
 
 
-def objective(trial, input_eirs, prev_ref, n_people=20, duration=20*365):
+def objective(trial, input_eirs, prev_ref, n_people=10, duration=20*365):
 
     antigen_switch_rate = trial.suggest_float("Antigen_Switch_Rate", 5e-10, 5e-8, log=True)
     mlflow.log_param("Antigen_Switch_Rate", antigen_switch_rate)
 
-    IntrahostComponent.set_params(dict(infection_params=dict(Antigen_Switch_Rate=antigen_switch_rate)))
+    falciparum_pfemp1_variants = trial.suggest_int("Falciparum_PfEMP1_Variants", 500, 1200)
+    mlflow.log_param("Falciparum_PfEMP1_Variants", falciparum_pfemp1_variants)
+
+    max_individual_infections = trial.suggest_int("Max_Individual_Infections", low=3, high=7)
+    mlflow.log_param("Max_Individual_Infections", max_individual_infections)
+
+    IntrahostComponent.set_params(dict(infection_params=dict(Antigen_Switch_Rate=antigen_switch_rate),
+                                       Falciparum_PfEMP1_Variants=falciparum_pfemp1_variants,
+                                       Max_Individual_Infections=max_individual_infections))
 
     # da = multiple_challenges(n_people=n_people, duration=duration, monthly_eirs=input_eirs)
 
@@ -62,9 +70,9 @@ def objective(trial, input_eirs, prev_ref, n_people=20, duration=20*365):
 
         da.loc[dict(individual=individual, channel='parasite_density')] = df.parasite_density.values
 
-        if (individual % 5) == 0:
+        if (individual % 2) == 0:
             intermediate_value = eval(prev_ref, da.where(da.individual <= individual, drop=True))
-            print(trial._trial_id, intermediate_value, individual)
+            # print(trial._trial_id, intermediate_value, individual)
             trial.report(intermediate_value, individual)
 
             if trial.should_prune():
@@ -99,10 +107,10 @@ if __name__ == '__main__':
     def prevalence_calibration(trial):
         return objective(trial, input_eirs=example_EIRs, prev_ref=example_prev_by_age_ref)
 
-    study_name = "with_pruning_debug5"  # unique identifier
+    study_name = "prune10x2_3d_200"  # unique identifier
     storage_name = "sqlite:///optuna_prev_calib.db"
     study = optuna.create_study(study_name=study_name, storage=storage_name,
                                 pruner=optuna.pruners.MedianPruner(),
                                 direction='minimize')
 
-    study.optimize(prevalence_calibration, n_trials=40, callbacks=[mlflc])
+    study.optimize(prevalence_calibration, n_trials=200, callbacks=[mlflc])
