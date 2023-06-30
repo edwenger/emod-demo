@@ -1,13 +1,26 @@
+import os
+import textwrap
+
 import matplotlib.pyplot as plt
 import mlflow
 import numpy as np
 import optuna
+
 from optuna.integration.mlflow import MLflowCallback
+
+from optuna_dashboard import save_note
+from optuna_dashboard.artifact.file_system import FileSystemBackend
+from optuna_dashboard.artifact import upload_artifact, get_artifact_path
+
 import pandas as pd
 import xarray as xr
 
 from seasonal_challenge import monthly_eir_challenge  #, multiple_challenges
 from emodlib.malaria import IntrahostComponent
+
+optuna_artifacts_dir = "optuna-artifacts"
+os.makedirs(optuna_artifacts_dir, exist_ok=True)
+artifact_backend = FileSystemBackend(f"./{optuna_artifacts_dir}/")
 
 
 def kl(p, q):
@@ -19,7 +32,7 @@ def kl(p, q):
 
 
 def plot_comparison(ref, sim):
-    fig, ax = plt.subplots(1, 1, figsize=(6, 6))
+    fig, ax = plt.subplots(1, 1, figsize=(3, 3))
     ax.set(ylim=(0, 1), ylabel='prevalence', xlabel='age (years)')
     ages = range(len(ref))
     ax.plot(ages, sim, '-')
@@ -28,7 +41,7 @@ def plot_comparison(ref, sim):
     return fig
 
 
-def eval(ref, sim, plot=False):
+def eval(ref, sim, plot=False, trial=None):
 
     prev_by_season = (sim.loc[dict(channel='parasite_density')] > 16).resample(time='3M').mean()
     avg_prev_by_age = prev_by_season.groupby('time.year').mean().mean(dim='individual')
@@ -37,6 +50,25 @@ def eval(ref, sim, plot=False):
     if plot:
         fig = plot_comparison(ref[:n_ages], avg_prev_by_age[:n_ages])
         mlflow.log_figure(fig, 'prev_compare.png')
+
+        fig_path = f"{optuna_artifacts_dir}/prev_compare_{trial.number}.png"
+        fig.savefig(fig_path)
+
+        artifact_id = upload_artifact(artifact_backend, trial, fig_path)
+        artifact_path = get_artifact_path(trial, artifact_id)
+        note = textwrap.dedent(
+            f"""\
+        ## Trial {trial.number}
+        A comparison of:
+         - simulated annual average prevalence in challenge trial scenario (blue line) 
+         - dummy prevalence calibration target data (orange points)
+
+        ![generated-image]({artifact_path})
+        """
+        )
+        save_note(trial, note)
+
+        plt.close(fig)
 
     return kl(ref[:n_ages], avg_prev_by_age[:n_ages])
 
@@ -78,7 +110,7 @@ def objective(trial, input_eirs, prev_ref, n_people=10, duration=20*365):
             if trial.should_prune():
                 raise optuna.exceptions.TrialPruned()
 
-    kl_div = eval(prev_ref, da, plot=True)
+    kl_div = eval(prev_ref, da, plot=True, trial=trial)
     mlflow.log_metric("kl_div", kl_div)
 
     return kl_div
@@ -86,6 +118,17 @@ def objective(trial, input_eirs, prev_ref, n_people=10, duration=20*365):
 
 if __name__ == '__main__':
  
+    """
+    To run this test calibration study:
+    > python optimize.py
+    
+    To explore optuna-tracked meta-data DB + artifacts:
+    > optuna-dashboard sqlite:///optuna.db --artifact-dir optuna-artifacts
+
+    To explore mlflow-tracked details:
+    > mlflow ui --backend-store-uri sqlite:///mlruns.db
+    """
+
     example_EIRs = [
         1, 1, 1,
         1, 1, 2,
@@ -100,17 +143,18 @@ if __name__ == '__main__':
         0.2, 0.2, 0.2, 0.2, 0.2]
 
     mlflc = MLflowCallback(
-        # tracking_uri='./mlruns',
+        tracking_uri='sqlite:///mlruns.db',
         metric_name="my metric score")
 
     @mlflc.track_in_mlflow()
     def prevalence_calibration(trial):
         return objective(trial, input_eirs=example_EIRs, prev_ref=example_prev_by_age_ref)
 
-    study_name = "prune10x2_3d_200"  # unique identifier
-    storage_name = "sqlite:///optuna_prev_calib.db"
+    study_name = "test-optuna"  # unique identifier
+    storage_name = "sqlite:///optuna.db"
     study = optuna.create_study(study_name=study_name, storage=storage_name,
                                 pruner=optuna.pruners.MedianPruner(),
-                                direction='minimize')
+                                direction='minimize',
+                                load_if_exists=True)
 
-    study.optimize(prevalence_calibration, n_trials=200, callbacks=[mlflc])
+    study.optimize(prevalence_calibration, n_trials=200, callbacks=[mlflc])  # increase n_trials and/or re-run to append more trials
