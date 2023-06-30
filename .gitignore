@@ -1,3 +1,11 @@
+# mlflow local caching
+mlruns/
+mlruns.db
+
+# caching for optuna-dashboard
+optuna.db
+optuna-artifacts/
+
 # data and temp files
 *.nc
 dask-worker-space/
@@ -107,3 +115,6 @@ venv.bak/
 
 # mypy
 .mypy_cache/
+
+# Mac stuff
+.DS_Store

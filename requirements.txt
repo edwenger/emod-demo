@@ -4,6 +4,8 @@ xarray
 matplotlib
 optuna
 ipywidgets
+mlflow
+optuna-dashboard
 
 --extra-index-url https://test.pypi.org/simple/
 emodlib>=0.0.3
