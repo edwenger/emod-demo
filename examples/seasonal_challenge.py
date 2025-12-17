@@ -6,7 +6,7 @@ import numpy as np
 import pandas as pd
 import xarray as xr
 
-from emodlib.malaria import IntrahostComponent
+from emodlib.malaria import IntrahostComponent, create_config
 
 
 def surface_area_biting_function(age_days):
@@ -33,7 +33,10 @@ def month_index_from_day(t):
     return (y2k + dt.timedelta(days=t)).month - 1
 
 
-def monthly_eir_challenge(duration, monthly_eirs, updates_per_day=2, callback=lambda x: None):
+def monthly_eir_challenge(duration, monthly_eirs, updates_per_day=2, callback=lambda x: None, config=None):
+
+    if config is None:
+        config = create_config()
 
     asexuals = np.zeros(duration)
     gametocytes = np.zeros(duration)
@@ -41,7 +44,7 @@ def monthly_eir_challenge(duration, monthly_eirs, updates_per_day=2, callback=la
     infects = np.zeros(duration)
     n_infs = np.zeros(duration)
 
-    ic = IntrahostComponent.create()
+    ic = IntrahostComponent.create(config)
 
     for t in range(duration):
 
@@ -71,15 +74,19 @@ def monthly_eir_challenge(duration, monthly_eirs, updates_per_day=2, callback=la
                          'n_infections': n_infs}).set_index('days')
 
 
-def multiple_challenges(n_people, duration, monthly_eirs):
+def multiple_challenges(n_people, duration, monthly_eirs, config=None):
+
+    if config is None:
+        config = create_config()
 
     da = xr.DataArray(dims=('individual', 'time', 'channel'),
                       coords=(range(n_people), pd.date_range('2000-01-01', freq='D', periods=duration), ['parasite_density']))
-    
+
     for individual in range(n_people):
-    
+
         df = monthly_eir_challenge(duration=duration,
-                                   monthly_eirs=monthly_eirs)
+                                   monthly_eirs=monthly_eirs,
+                                   config=config)
 
         da.loc[dict(individual=individual, channel='parasite_density')] = df.parasite_density.values
 

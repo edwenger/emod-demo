@@ -16,7 +16,7 @@ import pandas as pd
 import xarray as xr
 
 from seasonal_challenge import monthly_eir_challenge  #, multiple_challenges
-from emodlib.malaria import IntrahostComponent
+from emodlib.malaria import create_config
 
 optuna_artifacts_dir = "optuna-artifacts"
 os.makedirs(optuna_artifacts_dir, exist_ok=True)
@@ -84,21 +84,22 @@ def objective(trial, input_eirs, prev_ref, n_people=10, duration=20*365):
     max_individual_infections = trial.suggest_int("Max_Individual_Infections", low=3, high=7)
     mlflow.log_param("Max_Individual_Infections", max_individual_infections)
 
-    IntrahostComponent.set_params(dict(infection_params=dict(Antigen_Switch_Rate=antigen_switch_rate),
-                                       Falciparum_PfEMP1_Variants=falciparum_pfemp1_variants,
-                                       Max_Individual_Infections=max_individual_infections))
+    config = create_config(dict(infection_params=dict(Antigen_Switch_Rate=antigen_switch_rate),
+                                Falciparum_PfEMP1_Variants=falciparum_pfemp1_variants,
+                                Max_Individual_Infections=max_individual_infections))
 
     # da = multiple_challenges(n_people=n_people, duration=duration, monthly_eirs=input_eirs)
 
     ### refactoring to explore optuna.pruners behavior
 
     da = xr.DataArray(dims=('individual', 'time', 'channel'),
-                      coords=(range(n_people), pd.date_range('2000-01-01', freq='D', periods=duration), ['parasite_density']))        
+                      coords=(range(n_people), pd.date_range('2000-01-01', freq='D', periods=duration), ['parasite_density']))
 
     for individual in range(n_people):
-    
+
         df = monthly_eir_challenge(duration=duration,
-                                   monthly_eirs=input_eirs)
+                                   monthly_eirs=input_eirs,
+                                   config=config)
 
         da.loc[dict(individual=individual, channel='parasite_density')] = df.parasite_density.values
 

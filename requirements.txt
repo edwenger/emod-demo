@@ -8,4 +8,4 @@ mlflow
 optuna-dashboard
 
 --extra-index-url https://test.pypi.org/simple/
-emodlib>=0.0.3
+emodlib>=0.1.0
