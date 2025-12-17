@@ -15,7 +15,7 @@ from seasonal_challenge import (
     surface_area_biting_function,
     ComplexTreatment,
 )
-from emodlib.malaria import IntrahostComponent
+from emodlib.malaria import IntrahostComponent, create_config
 
 print("Testing parameter sweep pipeline...")
 
@@ -34,7 +34,8 @@ MONTHLY_MULTIPLIER = BASE_MONTHLY_MULTIPLIER * (SEASONALITY_AMPLIFICATION / BASE
 monthly_eirs = MONTHLY_MULTIPLIER * monthly_eir
 
 print(f"\n1. Testing individual initialization...")
-ic = IntrahostComponent.create()
+config = create_config()
+ic = IntrahostComponent.create(config)
 ic.susceptibility.age = 0.0
 print(f"   ✓ Created IntrahostComponent, age={ic.susceptibility.age}")
 

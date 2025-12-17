@@ -18,7 +18,7 @@ import matplotlib.pyplot as plt
 from datetime import datetime, timedelta
 from pathlib import Path
 
-from emodlib.malaria import IntrahostComponent
+from emodlib.malaria import IntrahostComponent, create_config
 from seasonal_challenge import ComplexTreatment
 
 # ==============================================================================
@@ -164,7 +164,7 @@ SAVE_VISIT_OUTPUT = True
 # HELPER FUNCTIONS
 # ==============================================================================
 
-def initialize_individual(age_years, burnin_eir=BURNIN_EIR, burnin_treatment_coverage=TREATMENT_COVERAGE_BURNIN):
+def initialize_individual(age_years, burnin_eir=BURNIN_EIR, burnin_treatment_coverage=TREATMENT_COVERAGE_BURNIN, config=None):
     """
     Initialize individual with age-appropriate immune state (Barry2021 pattern).
 
@@ -179,8 +179,13 @@ def initialize_individual(age_years, burnin_eir=BURNIN_EIR, burnin_treatment_cov
         Monthly EIR during burn-in period
     burnin_treatment_coverage : float
         Treatment coverage during burn-in (typically lower than trial period)
+    config : MalariaConfig, optional
+        Configuration object (creates default if not provided)
     """
-    ic = IntrahostComponent.create()
+    if config is None:
+        config = create_config()
+
+    ic = IntrahostComponent.create(config)
     ic.susceptibility.age = 0.0  # Start at birth
 
     # Initialize treatment for burn-in
@@ -348,13 +353,13 @@ def simulate_household():
     print(f"IRS: {IRS_EFFICACY*100:.0f}% reduction starting {IRS_START_DATE}")
     print(f"Treatment coverage: {TREATMENT_COVERAGE_BURNIN*100:.0f}% (burn-in) → {TREATMENT_COVERAGE_TRIAL*100:.0f}% (trial)")
 
-    # Set global parameters
-    IntrahostComponent.set_params(MODEL_PARAMS)
+    # Create config with model parameters
+    config = create_config(MODEL_PARAMS)
 
     # Initialize household members
     individuals = {}
     for member in HOUSEHOLD_MEMBERS:
-        ic = initialize_individual(member['age_years'])
+        ic = initialize_individual(member['age_years'], config=config)
         enrollment_date = pd.to_datetime(member['enrollment_date'])
 
         # Initialize ComplexTreatment for this individual (trial period coverage)

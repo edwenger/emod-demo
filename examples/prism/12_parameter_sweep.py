@@ -30,7 +30,7 @@ from seasonal_challenge import (
     ComplexTreatment,
     month_index_from_day,
 )
-from emodlib.malaria import IntrahostComponent
+from emodlib.malaria import IntrahostComponent, create_config
 
 # Configuration
 SITE = 'nagongera'
@@ -110,7 +110,7 @@ def calculate_observed_metrics(df):
     return results
 
 
-def run_single_simulation(monthly_eir, treatment_coverage, ind_idx, age_min, age_max):
+def run_single_simulation(monthly_eir, treatment_coverage, ind_idx, age_min, age_max, config=None):
     """Run a single simulation with given parameters"""
     # Sample age uniformly within bin
     age_at_enrollment = np.random.uniform(age_min, age_max)
@@ -119,7 +119,10 @@ def run_single_simulation(monthly_eir, treatment_coverage, ind_idx, age_min, age
     monthly_eirs = MONTHLY_MULTIPLIER * monthly_eir
 
     # Initialize individual
-    ic = IntrahostComponent.create()
+    if config is None:
+        config = create_config()
+
+    ic = IntrahostComponent.create(config)
     ic.susceptibility.age = 0.0  # Start at birth
 
     # Burn-in period: age individual to enrollment age with lower treatment coverage

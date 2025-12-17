@@ -14,7 +14,7 @@ pip install -r requirements.txt
 ```
 
 Key dependencies:
-- `emodlib>=0.0.3` (from test.pypi.org)
+- `emodlib>=0.1.0` (from test.pypi.org)
 - Scientific computing: numpy, pandas, xarray, matplotlib
 - Optimization: optuna, optuna-dashboard, mlflow
 - Interactive notebooks: ipywidgets
@@ -28,8 +28,9 @@ The repository includes a `.devcontainer.json` for GitHub Codespaces with pre-co
 ### Core Simulation Model
 
 The `emodlib.malaria.IntrahostComponent` is the primary interface to the malaria within-host model:
-- Create instances with `IntrahostComponent.create()`
-- Set global parameters with `IntrahostComponent.set_params(dict(...))`
+- Create configuration with `config = create_config(params)` where params is optional dict
+- Create instances with `ic = IntrahostComponent.create(config)`
+- Update config incrementally with `config.update(params)`
 - Simulate time steps with `ic.update(dt=...)`
 - Add new infections with `ic.challenge()`
 - Apply treatment with `ic.treat()`
